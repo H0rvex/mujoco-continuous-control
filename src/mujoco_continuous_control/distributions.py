@@ -41,13 +41,13 @@ class SquashedGaussian:
     def sample(self) -> tuple[Tensor, Tensor, Tensor]:
         raw_action = self.normal.sample()
         squashed_action = torch.tanh(raw_action)
-        env_action = self._scale_to_action_space(squashed_action)
+        env_action = self.scale_to_action_space(squashed_action)
         return env_action, raw_action, squashed_action
 
     def rsample(self) -> tuple[Tensor, Tensor, Tensor]:
         raw_action = self.normal.rsample()
         squashed_action = torch.tanh(raw_action)
-        env_action = self._scale_to_action_space(squashed_action)
+        env_action = self.scale_to_action_space(squashed_action)
         return env_action, raw_action, squashed_action
 
     def log_prob(
@@ -71,7 +71,7 @@ class SquashedGaussian:
 
     def mode(self) -> Tensor:
         squashed_action = torch.tanh(self.mean)
-        return self._scale_to_action_space(squashed_action)
+        return self.scale_to_action_space(squashed_action)
 
-    def _scale_to_action_space(self, squashed_action: Tensor) -> Tensor:
+    def scale_to_action_space(self, squashed_action: Tensor) -> Tensor:
         return self.action_bias + self.action_scale * squashed_action
