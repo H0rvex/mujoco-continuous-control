@@ -1,0 +1,7 @@
+env_id: Pendulum-v1
+seed: 0
+num_envs: 2
+total_timesteps: 16
+gamma: 0.99
+capture_video: false
+run_name: smoke_test

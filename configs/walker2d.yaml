@@ -1,0 +1,7 @@
+env_id: Walker2d-v5
+seed: 1
+num_envs: 8
+total_timesteps: 1000000
+gamma: 0.99
+capture_video: false
+run_name: walker2d_ppo
