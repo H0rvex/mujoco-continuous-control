@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mujoco-continuous-control"
+version = "0.1.0"
+description = "Portfolio-grade MuJoCo continuous-control reinforcement learning experiments."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "gymnasium[mujoco]>=1.0",
+    "matplotlib>=3.8",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "torch>=2.0",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+mcc-train = "mujoco_continuous_control.train:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
