@@ -1,7 +1,32 @@
 env_id: Pendulum-v1
-seed: 0
+seed: 1
+total_timesteps: 4096
+
 num_envs: 2
-total_timesteps: 16
+rollout_steps: 128
+num_minibatches: 4
+update_epochs: 2
+
 gamma: 0.99
-capture_video: false
-run_name: smoke_test
+gae_lambda: 0.95
+learning_rate: 3.0e-4
+anneal_lr: false
+
+clip_coef: 0.2
+vf_coef: 0.5
+ent_coef: 0.0
+max_grad_norm: 0.5
+target_kl: null
+
+normalize_obs: true
+normalize_advantages: true
+clip_value_loss: true
+
+hidden_sizes: [64, 64]
+activation: tanh
+log_std_init: -0.5
+
+eval_interval: 2048
+num_eval_episodes: 2
+checkpoint_interval: 2048
+save_video: false
