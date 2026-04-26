@@ -22,8 +22,7 @@ def _mean_diagnostics(history: list[dict[str, float]]) -> dict[str, float]:
     if not history:
         return {}
     return {
-        key: sum(item[key] for item in history) / len(history)
-        for key in history[0]
+        key: sum(item[key] for item in history) / len(history) for key in history[0]
     }
 
 
@@ -42,7 +41,13 @@ def ppo_update(
     update_epochs = int(_config_value(config, "update_epochs", 1))
     minibatch_size = int(_config_value(config, "minibatch_size", batch.obs.shape[0]))
     normalize_advantages = bool(_config_value(config, "normalize_advantages", True))
-    clip_vloss = bool(_config_value(config, "clip_vloss", True))
+    clip_vloss = bool(
+        _config_value(
+            config,
+            "clip_vloss",
+            _config_value(config, "clip_value_loss", True),
+        )
+    )
     target_kl = _config_value(config, "target_kl", None)
     target_kl = None if target_kl is None else float(target_kl)
 
