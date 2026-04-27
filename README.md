@@ -26,6 +26,10 @@ inspection.
 | Walker2d-v5 | `assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif` | Representative rollout from the strongest seed |
 | Ant-v5 | `assets/videos/ant/Ant-v5_episode_1.gif` | `make video-ant` after Ant training |
 
+<p align="center">
+  <img src="assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif" width="620" alt="Walker2d-v5 deterministic rollout from seed 1">
+</p>
+
 Walker2d seed 1 is used as the representative video because it has the highest
 20-episode deterministic evaluation mean and survives the full 1000-step
 horizon in all evaluation episodes. Ant rollout media will be added after the
@@ -137,28 +141,42 @@ maximum return, and best deterministic evaluation performance across seeds.
 Plotting reads each run's `metrics.csv` and writes PNGs under
 `assets/curves/{env_id}/{run_name}/`.
 
-Ant curve set, after Ant training:
+The primary Walker2d comparison is the deterministic evaluation curve across
+the three training seeds:
 
-- `assets/curves/Ant-v5/ant_seed1/training_return.png`
-- `assets/curves/Ant-v5/ant_seed1/evaluation_return.png`
-- `assets/curves/Ant-v5/ant_seed1/losses.png`
-- `assets/curves/Ant-v5/ant_seed1/entropy.png`
-- `assets/curves/Ant-v5/ant_seed1/approx_kl.png`
-- `assets/curves/Ant-v5/ant_seed1/clip_fraction.png`
-- `assets/curves/Ant-v5/ant_seed1/action_std.png`
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 evaluation return](assets/curves/Walker2d-v5/walker2d_seed1/evaluation_return.png) | ![Walker2d seed 2 evaluation return](assets/curves/Walker2d-v5/walker2d_seed2/evaluation_return.png) | ![Walker2d seed 3 evaluation return](assets/curves/Walker2d-v5/walker2d_seed3/evaluation_return.png) |
 
-Walker2d curve sets:
+Training-return curves show how noisy rollout collection remains even when
+deterministic evaluation improves:
 
-- `assets/curves/Walker2d-v5/walker2d_seed1/training_return.png`
-- `assets/curves/Walker2d-v5/walker2d_seed1/evaluation_return.png`
-- `assets/curves/Walker2d-v5/walker2d_seed1/losses.png`
-- `assets/curves/Walker2d-v5/walker2d_seed1/entropy.png`
-- `assets/curves/Walker2d-v5/walker2d_seed1/approx_kl.png`
-- `assets/curves/Walker2d-v5/walker2d_seed1/clip_fraction.png`
-- `assets/curves/Walker2d-v5/walker2d_seed1/action_std.png`
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 training return](assets/curves/Walker2d-v5/walker2d_seed1/training_return.png) | ![Walker2d seed 2 training return](assets/curves/Walker2d-v5/walker2d_seed2/training_return.png) | ![Walker2d seed 3 training return](assets/curves/Walker2d-v5/walker2d_seed3/training_return.png) |
 
-The same seven-plot set is included for `walker2d_seed2` and
-`walker2d_seed3`.
+<details>
+<summary>Walker2d diagnostic curves</summary>
+
+Approximate KL:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 approximate KL](assets/curves/Walker2d-v5/walker2d_seed1/approx_kl.png) | ![Walker2d seed 2 approximate KL](assets/curves/Walker2d-v5/walker2d_seed2/approx_kl.png) | ![Walker2d seed 3 approximate KL](assets/curves/Walker2d-v5/walker2d_seed3/approx_kl.png) |
+
+Action standard deviation:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed1/action_std.png) | ![Walker2d seed 2 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed2/action_std.png) | ![Walker2d seed 3 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed3/action_std.png) |
+
+Additional plots are available for `losses`, `entropy`, and `clip_fraction` in
+each `assets/curves/Walker2d-v5/walker2d_seed*/` directory.
+
+</details>
+
+Ant curves will use the same artifact layout after Ant training:
+`assets/curves/Ant-v5/ant_seed1/`.
 
 ## Why MuJoCo Continuous Control
 
