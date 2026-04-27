@@ -46,6 +46,8 @@ def test_run_training_writes_run_artifacts(tmp_path) -> None:
     assert (checkpoint_dir / "best.pt").exists()
     assert (checkpoint_dir / "final.pt").exists()
     assert (checkpoint_dir / "step_8.pt").exists()
+    assert summary["best_checkpoint"] == checkpoint_dir / "best.pt"
+    assert summary["latest_checkpoint"] == checkpoint_dir / "latest.pt"
 
     with (run_dir / "metrics.csv").open("r", newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))

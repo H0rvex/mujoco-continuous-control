@@ -584,6 +584,7 @@ def run_training(
             "global_step": global_step,
             "best_eval_return": best_eval_return,
             "metrics_path": metrics_path,
+            "best_checkpoint": checkpoint_dir / "best.pt",
             "latest_checkpoint": checkpoint_dir / "latest.pt",
         }
     finally:
