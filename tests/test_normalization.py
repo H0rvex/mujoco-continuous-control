@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from mujoco_continuous_control.normalization import RunningMeanStd
+from mujoco_continuous_control.normalization import RewardNormalizer, RunningMeanStd
 
 
 def test_running_mean_std_uses_float64_stats() -> None:
@@ -73,3 +73,36 @@ def test_loaded_frozen_stats_do_not_update_during_evaluation() -> None:
     assert torch.equal(frozen.var, original_var)
     assert torch.equal(frozen.count, original_count)
     assert not frozen.training
+
+
+def test_reward_normalizer_uses_discounted_returns_and_clips() -> None:
+    normalizer = RewardNormalizer(num_envs=2, gamma=0.99, clip=1.0)
+
+    normalized = normalizer.update_and_normalize(
+        rewards=torch.tensor([1000.0, -1000.0]),
+        dones=torch.tensor([False, True]),
+    )
+
+    assert torch.equal(normalized, torch.tensor([1.0, -1.0]))
+    assert normalizer.returns.shape == (2,)
+    assert normalizer.returns[0] == 1000.0
+    assert normalizer.returns[1] == 0.0
+    assert normalizer.return_rms.count > 2.0
+
+
+def test_reward_normalizer_state_round_trip() -> None:
+    normalizer = RewardNormalizer(num_envs=3, gamma=0.95, clip=10.0)
+    normalizer.update_and_normalize(
+        rewards=torch.tensor([1.0, 2.0, 3.0]),
+        dones=torch.tensor([False, False, True]),
+    )
+
+    loaded = RewardNormalizer.from_state_dict(normalizer.state_dict())
+
+    assert loaded.num_envs == normalizer.num_envs
+    assert loaded.gamma == normalizer.gamma
+    assert loaded.clip == normalizer.clip
+    assert torch.allclose(loaded.returns, normalizer.returns)
+    assert torch.allclose(loaded.return_rms.mean, normalizer.return_rms.mean)
+    assert torch.allclose(loaded.return_rms.var, normalizer.return_rms.var)
+    assert torch.allclose(loaded.return_rms.count, normalizer.return_rms.count)

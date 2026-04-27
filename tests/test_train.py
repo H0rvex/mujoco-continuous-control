@@ -56,3 +56,40 @@ def test_run_training_writes_run_artifacts(tmp_path) -> None:
     assert rows[0].keys() == set(METRIC_FIELDS)
     assert rows[-1]["global_step"] == "8"
     assert rows[-1]["eval/mean_return"] != "nan"
+
+
+def test_lr_anneal_timesteps_can_outlive_training_horizon(tmp_path) -> None:
+    summary = run_training(
+        {
+            "env_id": "Pendulum-v1",
+            "seed": 7,
+            "run_name": "anneal_horizon_smoke",
+            "total_timesteps": 12,
+            "lr_anneal_timesteps": 16,
+            "num_envs": 2,
+            "rollout_steps": 4,
+            "num_minibatches": 2,
+            "update_epochs": 1,
+            "gamma": 0.99,
+            "gae_lambda": 0.95,
+            "learning_rate": 3.0e-4,
+            "anneal_lr": True,
+            "normalize_obs": True,
+            "normalize_advantages": True,
+            "clip_value_loss": True,
+            "hidden_sizes": [16],
+            "activation": "tanh",
+            "log_std_init": -0.5,
+            "eval_interval": 0,
+            "num_eval_episodes": 0,
+            "checkpoint_interval": 0,
+            "device": "cpu",
+        },
+        runs_dir=tmp_path,
+    )
+
+    with summary["metrics_path"].open("r", newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert rows[-1]["global_step"] == "12"
+    assert abs(float(rows[-1]["optimizer/learning_rate"]) - 1.5e-4) < 1e-12

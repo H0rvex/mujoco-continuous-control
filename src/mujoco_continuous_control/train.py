@@ -21,7 +21,7 @@ from mujoco_continuous_control.checkpointing import (
 from mujoco_continuous_control.envs import make_env, make_vector_env
 from mujoco_continuous_control.gae import compute_gae
 from mujoco_continuous_control.models import ActorCritic
-from mujoco_continuous_control.normalization import RunningMeanStd
+from mujoco_continuous_control.normalization import RewardNormalizer, RunningMeanStd
 from mujoco_continuous_control.ppo import ppo_update
 from mujoco_continuous_control.rollout import RolloutBuffer
 
@@ -280,8 +280,11 @@ def run_training(
     gae_lambda = float(config.get("gae_lambda", 0.95))
     learning_rate = float(config.get("learning_rate", 3e-4))
     anneal_lr = bool(config.get("anneal_lr", False))
+    lr_anneal_timesteps = int(config.get("lr_anneal_timesteps", total_timesteps))
     normalize_obs = bool(config.get("normalize_obs", True))
     obs_clip = float(config.get("obs_clip", 10.0))
+    normalize_rewards = bool(config.get("normalize_rewards", False))
+    reward_clip = float(config.get("reward_clip", 10.0))
     eval_interval = int(config.get("eval_interval", 0))
     num_eval_episodes = int(config.get("num_eval_episodes", 0))
     checkpoint_interval = int(config.get("checkpoint_interval", 0))
@@ -297,13 +300,19 @@ def run_training(
     if total_timesteps < 1:
         msg = f"total_timesteps must be >= 1, got {total_timesteps}"
         raise ValueError(msg)
+    if lr_anneal_timesteps < 1:
+        msg = f"lr_anneal_timesteps must be >= 1, got {lr_anneal_timesteps}"
+        raise ValueError(msg)
 
     config["env_id"] = env_id
     config["seed"] = seed
     config["run_name"] = run_name
     config["total_timesteps"] = total_timesteps
+    config["lr_anneal_timesteps"] = lr_anneal_timesteps
     config["num_envs"] = num_envs
     config["rollout_steps"] = rollout_steps
+    config["normalize_rewards"] = normalize_rewards
+    config["reward_clip"] = reward_clip
     config["device"] = str(device)
 
     seed_everything(seed)
@@ -350,6 +359,11 @@ def run_training(
             eps=float(config.get("adam_eps", 1e-5)),
         )
         obs_rms = RunningMeanStd(obs_shape) if normalize_obs else None
+        reward_normalizer = (
+            RewardNormalizer(num_envs=num_envs, gamma=gamma, clip=reward_clip)
+            if normalize_rewards
+            else None
+        )
         global_step = 0
         start_update = 0
         best_eval_return = float("-inf")
@@ -366,6 +380,11 @@ def run_training(
             best_eval_return = float(checkpoint.get("best_eval_return", float("-inf")))
             if obs_rms is not None and checkpoint.get("obs_rms") is not None:
                 obs_rms.load_state_dict(checkpoint["obs_rms"])
+            if (
+                reward_normalizer is not None
+                and checkpoint.get("reward_normalizer") is not None
+            ):
+                reward_normalizer.load_state_dict(checkpoint["reward_normalizer"])
 
         next_obs, _ = envs.reset(seed=seed)
         next_done = torch.zeros(num_envs, dtype=torch.float32, device=device)
@@ -397,7 +416,7 @@ def run_training(
                 )
                 current_batch_size = current_rollout_steps * num_envs
                 if anneal_lr:
-                    fraction = max(0.0, 1.0 - global_step / total_timesteps)
+                    fraction = max(0.0, 1.0 - global_step / lr_anneal_timesteps)
                     optimizer.param_groups[0]["lr"] = fraction * learning_rate
 
                 buffer = RolloutBuffer(
@@ -425,6 +444,12 @@ def run_training(
                     )
                     reward_tensor = _as_float_tensor(reward, device)
                     done_array = np.logical_or(termination, truncation)
+                    done_tensor = _as_float_tensor(done_array, device)
+                    if reward_normalizer is not None:
+                        reward_tensor = reward_normalizer.update_and_normalize(
+                            reward_tensor,
+                            done_tensor,
+                        )
 
                     buffer.add(
                         obs=obs_tensor,
@@ -436,7 +461,7 @@ def run_training(
                         values=value,
                     )
 
-                    next_done = _as_float_tensor(done_array, device)
+                    next_done = done_tensor
                     global_step += num_envs
 
                     for episode_return, episode_length in _extract_episode_metrics(
@@ -500,6 +525,7 @@ def run_training(
                             global_step=global_step,
                             config=config,
                             obs_rms=obs_rms,
+                            reward_normalizer=reward_normalizer,
                             extra=_checkpoint_extra(best_eval_return),
                         )
                     while next_eval_step is not None and global_step >= next_eval_step:
@@ -517,6 +543,7 @@ def run_training(
                         global_step=global_step,
                         config=config,
                         obs_rms=obs_rms,
+                        reward_normalizer=reward_normalizer,
                         extra=_checkpoint_extra(best_eval_return),
                     )
                     save_checkpoint(
@@ -526,6 +553,7 @@ def run_training(
                         global_step=global_step,
                         config=config,
                         obs_rms=obs_rms,
+                        reward_normalizer=reward_normalizer,
                         extra=_checkpoint_extra(best_eval_return),
                     )
                     while (
@@ -567,6 +595,7 @@ def run_training(
             global_step=global_step,
             config=config,
             obs_rms=obs_rms,
+            reward_normalizer=reward_normalizer,
             extra=_checkpoint_extra(best_eval_return),
         )
         save_checkpoint(
@@ -576,6 +605,7 @@ def run_training(
             global_step=global_step,
             config=config,
             obs_rms=obs_rms,
+            reward_normalizer=reward_normalizer,
             extra=_checkpoint_extra(best_eval_return),
         )
 

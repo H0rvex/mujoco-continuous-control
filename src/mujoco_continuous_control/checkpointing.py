@@ -22,18 +22,18 @@ def _copy_mapping(mapping: Mapping[str, Any]) -> dict[str, Any]:
     return copied
 
 
-def _obs_rms_state(obs_rms: Any | None) -> dict[str, Any] | None:
-    if obs_rms is None:
+def _state_dict_payload(value: Any | None, name: str) -> dict[str, Any] | None:
+    if value is None:
         return None
-    if isinstance(obs_rms, Mapping):
-        return _copy_mapping(obs_rms)
-    if hasattr(obs_rms, "state_dict"):
-        state_dict = obs_rms.state_dict()
+    if isinstance(value, Mapping):
+        return _copy_mapping(value)
+    if hasattr(value, "state_dict"):
+        state_dict = value.state_dict()
         if not isinstance(state_dict, Mapping):
-            msg = "obs_rms.state_dict() must return a mapping."
+            msg = f"{name}.state_dict() must return a mapping."
             raise TypeError(msg)
         return _copy_mapping(state_dict)
-    msg = "obs_rms must be None, a mapping, or expose state_dict()."
+    msg = f"{name} must be None, a mapping, or expose state_dict()."
     raise TypeError(msg)
 
 
@@ -60,6 +60,7 @@ def save_checkpoint(
     config: Mapping[str, Any],
     obs_rms: Any | None = None,
     extra: Mapping[str, Any] | None = None,
+    reward_normalizer: Any | None = None,
 ) -> dict[str, Any]:
     """Save a PPO training checkpoint and return the serialized payload."""
 
@@ -73,7 +74,11 @@ def save_checkpoint(
         "optimizer_state_dict": optimizer.state_dict(),
         "global_step": int(global_step),
         "config": config_dict,
-        "obs_rms": _obs_rms_state(obs_rms),
+        "obs_rms": _state_dict_payload(obs_rms, "obs_rms"),
+        "reward_normalizer": _state_dict_payload(
+            reward_normalizer,
+            "reward_normalizer",
+        ),
         "env_id": config_dict.get("env_id"),
         "seed": config_dict.get("seed"),
         "best_eval_return": extra_dict.get(

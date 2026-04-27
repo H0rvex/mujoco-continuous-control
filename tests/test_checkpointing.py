@@ -7,7 +7,7 @@ from mujoco_continuous_control.checkpointing import (
     save_checkpoint,
 )
 from mujoco_continuous_control.models import ActorCritic
-from mujoco_continuous_control.normalization import RunningMeanStd
+from mujoco_continuous_control.normalization import RewardNormalizer, RunningMeanStd
 
 
 def _make_model() -> ActorCritic:
@@ -137,3 +137,33 @@ def test_checkpoint_preserves_obs_normalization_stats(tmp_path) -> None:
     assert torch.allclose(loaded_obs_rms.var, obs_rms.var)
     assert torch.allclose(loaded_obs_rms.count, obs_rms.count)
     assert not loaded_obs_rms.training
+
+
+def test_checkpoint_preserves_reward_normalizer_stats(tmp_path) -> None:
+    model = _make_model()
+    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+    reward_normalizer = RewardNormalizer(num_envs=2, gamma=0.99, clip=10.0)
+    reward_normalizer.update_and_normalize(
+        rewards=torch.tensor([1.0, 2.0]),
+        dones=torch.tensor([False, True]),
+    )
+    path = tmp_path / "reward_normalization.pt"
+
+    save_checkpoint(
+        path=path,
+        model=model,
+        optimizer=optimizer,
+        global_step=4096,
+        config={"env_id": "Pendulum-v1", "seed": 4},
+        reward_normalizer=reward_normalizer,
+    )
+    checkpoint = load_checkpoint(path, _make_model())
+    loaded = RewardNormalizer.from_state_dict(checkpoint["reward_normalizer"])
+
+    assert loaded.num_envs == reward_normalizer.num_envs
+    assert loaded.gamma == reward_normalizer.gamma
+    assert loaded.clip == reward_normalizer.clip
+    assert torch.allclose(loaded.returns, reward_normalizer.returns)
+    assert torch.allclose(loaded.return_rms.mean, reward_normalizer.return_rms.mean)
+    assert torch.allclose(loaded.return_rms.var, reward_normalizer.return_rms.var)
+    assert torch.allclose(loaded.return_rms.count, reward_normalizer.return_rms.count)
