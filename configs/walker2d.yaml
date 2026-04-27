@@ -1,6 +1,7 @@
 env_id: Walker2d-v5
 seed: 1
 total_timesteps: 2000000
+lr_anneal_timesteps: 2000000
 
 num_envs: 8
 rollout_steps: 2048
@@ -10,6 +11,7 @@ update_epochs: 5
 gamma: 0.99
 gae_lambda: 0.95
 learning_rate: 2e-4
+anneal_lr: true
 
 clip_coef: 0.2
 vf_coef: 0.5
