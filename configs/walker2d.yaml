@@ -4,21 +4,22 @@ total_timesteps: 2000000
 
 num_envs: 8
 rollout_steps: 2048
-num_minibatches: 32
+num_minibatches: 16
 update_epochs: 5
 
 gamma: 0.99
 gae_lambda: 0.95
-learning_rate: 1.0e-4
-anneal_lr: true
+learning_rate: 2e-4
 
 clip_coef: 0.2
 vf_coef: 0.5
 ent_coef: 0.0
 max_grad_norm: 0.5
-target_kl: 0.015
+target_kl: 0.02
 
 normalize_obs: true
+normalize_rewards: true
+reward_clip: 10.0
 normalize_advantages: true
 clip_value_loss: true
 
