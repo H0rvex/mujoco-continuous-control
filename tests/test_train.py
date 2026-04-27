@@ -2,7 +2,85 @@ from __future__ import annotations
 
 import csv
 
-from mujoco_continuous_control.train import METRIC_FIELDS, run_training
+import numpy as np
+import torch
+
+from mujoco_continuous_control.train import (
+    METRIC_FIELDS,
+    _bootstrap_truncated_rewards,
+    run_training,
+)
+
+
+class _ValueModel(torch.nn.Module):
+    def get_action_and_value(
+        self,
+        obs: torch.Tensor,
+        action: torch.Tensor | None = None,
+        deterministic: bool = False,
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
+        batch_size = obs.shape[0]
+        zeros = torch.zeros(batch_size, 1, dtype=obs.dtype, device=obs.device)
+        value = obs.squeeze(-1) * 2.0
+        return (
+            zeros,
+            torch.zeros(batch_size, dtype=obs.dtype, device=obs.device),
+            torch.zeros(batch_size, dtype=obs.dtype, device=obs.device),
+            value,
+            zeros,
+            zeros,
+        )
+
+
+def test_truncated_rewards_bootstrap_from_final_observation() -> None:
+    rewards = torch.tensor([1.0, 2.0])
+    infos = {
+        "final_obs": np.array(
+            [
+                np.array([3.0], dtype=np.float32),
+                np.array([5.0], dtype=np.float32),
+            ],
+            dtype=object,
+        ),
+        "_final_obs": np.array([True, True]),
+    }
+
+    adjusted = _bootstrap_truncated_rewards(
+        rewards=rewards,
+        truncations=np.array([True, False]),
+        infos=infos,
+        model=_ValueModel(),
+        device=torch.device("cpu"),
+        obs_rms=None,
+        obs_clip=10.0,
+        gamma=0.5,
+    )
+
+    assert torch.allclose(adjusted, torch.tensor([4.0, 2.0]))
+
+
+def test_truncated_reward_bootstrap_is_noop_without_final_observation() -> None:
+    rewards = torch.tensor([1.0])
+
+    adjusted = _bootstrap_truncated_rewards(
+        rewards=rewards,
+        truncations=np.array([True]),
+        infos={},
+        model=_ValueModel(),
+        device=torch.device("cpu"),
+        obs_rms=None,
+        obs_clip=10.0,
+        gamma=0.99,
+    )
+
+    assert adjusted is rewards
 
 
 def test_run_training_writes_run_artifacts(tmp_path) -> None:

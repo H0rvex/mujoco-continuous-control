@@ -139,6 +139,91 @@ def _extract_episode_metrics_from_mapping(
     ]
 
 
+def _extract_episode_metrics(infos: Mapping[str, Any]) -> list[tuple[float, float]]:
+    metrics = _extract_episode_metrics_from_mapping(infos)
+
+    final_info = infos.get("final_info")
+    if isinstance(final_info, Mapping):
+        metrics.extend(_extract_episode_metrics_from_mapping(final_info))
+    elif isinstance(final_info, np.ndarray):
+        for item in final_info.reshape(-1):
+            if isinstance(item, Mapping):
+                metrics.extend(_extract_episode_metrics_from_mapping(item))
+
+    return metrics
+
+
+def _extract_final_observations(
+    infos: Mapping[str, Any],
+    truncations: Any,
+) -> tuple[list[int], list[np.ndarray]]:
+    final_obs_key = None
+    for key in ("final_obs", "final_observation"):
+        if key in infos:
+            final_obs_key = key
+            break
+    if final_obs_key is None:
+        return [], []
+
+    truncation_mask = np.asarray(truncations, dtype=bool).reshape(-1)
+    valid_mask = np.asarray(
+        infos.get(f"_{final_obs_key}", np.ones_like(truncation_mask, dtype=bool)),
+        dtype=bool,
+    ).reshape(-1)
+    final_observations = np.asarray(infos[final_obs_key], dtype=object)
+
+    indices: list[int] = []
+    observations: list[np.ndarray] = []
+    for idx, is_truncated in enumerate(truncation_mask):
+        if not is_truncated or idx >= valid_mask.size or not valid_mask[idx]:
+            continue
+        if idx >= final_observations.shape[0]:
+            continue
+        final_obs = final_observations[idx]
+        if final_obs is None:
+            continue
+        indices.append(idx)
+        observations.append(np.asarray(final_obs, dtype=np.float32))
+    return indices, observations
+
+
+def _bootstrap_truncated_rewards(
+    rewards: Tensor,
+    truncations: Any,
+    infos: Mapping[str, Any],
+    model: ActorCritic,
+    device: torch.device,
+    obs_rms: RunningMeanStd | None,
+    obs_clip: float,
+    gamma: float,
+) -> Tensor:
+    indices, final_observations = _extract_final_observations(
+        infos=infos,
+        truncations=truncations,
+    )
+    if not indices:
+        return rewards
+
+    final_obs_batch = np.stack(final_observations)
+    final_obs_tensor = _normalize_obs(
+        final_obs_batch,
+        device=device,
+        obs_rms=obs_rms,
+        clip=obs_clip,
+        update=False,
+    )
+    with torch.no_grad():
+        _, _, _, final_values, _, _ = model.get_action_and_value(
+            final_obs_tensor,
+            deterministic=True,
+        )
+
+    adjusted_rewards = rewards.clone()
+    index_tensor = torch.as_tensor(indices, dtype=torch.long, device=device)
+    adjusted_rewards[index_tensor] += gamma * final_values.to(dtype=rewards.dtype)
+    return adjusted_rewards
+
+
 def _make_model(
     obs_dim: int,
     action_dim: int,
@@ -452,6 +537,16 @@ def run_training(
                             reward_tensor,
                             done_tensor,
                         )
+                    reward_tensor = _bootstrap_truncated_rewards(
+                        rewards=reward_tensor,
+                        truncations=truncation,
+                        infos=infos,
+                        model=model,
+                        device=device,
+                        obs_rms=obs_rms,
+                        obs_clip=obs_clip,
+                        gamma=gamma,
+                    )
 
                     buffer.add(
                         obs=obs_tensor,
