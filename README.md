@@ -10,24 +10,30 @@ rollout media, and diagnostic plots. Ant-v5 is the primary benchmark because it
 is the harder multi-limb locomotion task; Walker2d-v5 is the lower-dimensional
 locomotion baseline.
 
-> **Status:** Implementation and experiment pipeline in progress. Final Walker2d-v5 and Ant-v5 scores, curves, and rollout GIFs will be added after full training runs.
+> **Status:** Walker2d-v5 has three completed PPO seeds with deterministic
+> evaluation, curves, and a representative rollout GIF. Ant-v5 remains the next
+> harder benchmark.
 
 ## Rollout Videos
 
-Walker2d-v5 is used as the lower-dimensional locomotion baseline, while Ant-v5 is the harder multi-limb benchmark and primary portfolio target. Recordings are generated from deterministic
-policy rollouts and saved as GIFs for quick inspection.
+Walker2d-v5 is used as the lower-dimensional locomotion baseline, while Ant-v5
+is the harder multi-limb benchmark and primary portfolio target. Recordings are
+generated from deterministic policy rollouts and saved as GIFs for quick
+inspection.
 
 | Environment | Rollout GIF | Command |
 | --- | --- | --- |
-| Ant-v5 | `assets/videos/ant/Ant-v5_episode_1.gif` | `make video-ant` |
-| Walker2d-v5 | `assets/videos/walker2d/Walker2d-v5_episode_1.gif` | `make video-walker` |
+| Walker2d-v5 | `assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif` | Representative rollout from the strongest seed |
+| Ant-v5 | `assets/videos/ant/Ant-v5_episode_1.gif` | `make video-ant` after Ant training |
 
-Add the generated GIFs to the paths above after running trained Ant and
-Walker2d policies:
+Walker2d seed 1 is used as the representative video because it has the highest
+20-episode deterministic evaluation mean and survives the full 1000-step
+horizon in all evaluation episodes. Ant rollout media will be added after the
+Ant training run.
 
 ```bash
-make video-ant
 make video-walker
+make video-ant
 ```
 
 ## Highlights
@@ -48,15 +54,29 @@ make video-walker
 
 ## Results
 
-Full MuJoCo training results should be filled from `eval_results.json` after
-running the Ant and Walker2d jobs. The table is intentionally left factual here:
-the repository includes the training, evaluation, video, and plotting pipeline,
-but no final Ant/Walker score is claimed until those runs are produced.
+Walker2d-v5 results are from `best.pt` checkpoints evaluated deterministically
+for 20 episodes per seed with frozen observation normalization and evaluation
+seed `1000`. The seed-level table reports the post-training
+`eval_results.json` summary for each trained seed.
 
 | Environment | Role | Train seeds | Steps / seed | Eval episodes / seed | Mean return | Std across seeds | Best return | Curves | Video |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| Ant-v5 | Harder benchmark | TBD | 5,000,000 | 10–20 | TBD | TBD | TBD | `assets/curves/Ant-v5/` | `assets/videos/ant/` |
-| Walker2d-v5 | Locomotion baseline | TBD | 2,000,000 | 10–20 | TBD | TBD | TBD | `assets/curves/Walker2d-v5/` | `assets/videos/walker2d/` |
+| Walker2d-v5 | Locomotion baseline | 3 | 2,000,000 | 20 | 2951.31 | 872.80 | 3720.55 | `assets/curves/Walker2d-v5/` | `assets/videos/Walker2d-v5/walker2d_seed1/` |
+| Ant-v5 | Harder benchmark | TBD | 5,000,000 | 20 | TBD | TBD | TBD | `assets/curves/Ant-v5/` | `assets/videos/ant/` |
+
+Walker2d seed-level deterministic evaluation:
+
+| Seed | Checkpoint | Eval mean | Eval std | Eval min | Eval max | Episode length note |
+| ---: | --- | ---: | ---: | ---: | ---: | --- |
+| 1 | `runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt` | 3720.55 | 57.10 | 3609.85 | 3848.61 | Full horizon in all 20 episodes, 1000/1000 steps |
+| 2 | `runs/Walker2d-v5/walker2d_seed2/checkpoints/best.pt` | 3130.59 | 12.98 | 3104.85 | 3155.95 | Full horizon in all 20 episodes, 1000/1000 steps |
+| 3 | `runs/Walker2d-v5/walker2d_seed3/checkpoints/best.pt` | 2002.79 | 422.43 | 1457.71 | 2830.42 | Early termination in all 20 episodes, 453-808 steps |
+
+The aggregate Walker2d mean is `2951.31` with sample standard deviation
+`872.80` across the three seed-level means. Seed 3 is a useful negative case:
+it learns partial locomotion but remains dynamically unstable, falls before the
+time limit, and shows the seed sensitivity expected from PPO on contact-rich
+locomotion tasks at this training budget.
 
 Recommended result-generation flow:
 
@@ -117,7 +137,7 @@ maximum return, and best deterministic evaluation performance across seeds.
 Plotting reads each run's `metrics.csv` and writes PNGs under
 `assets/curves/{env_id}/{run_name}/`.
 
-Ant curve set:
+Ant curve set, after Ant training:
 
 - `assets/curves/Ant-v5/ant_seed1/training_return.png`
 - `assets/curves/Ant-v5/ant_seed1/evaluation_return.png`
@@ -127,7 +147,7 @@ Ant curve set:
 - `assets/curves/Ant-v5/ant_seed1/clip_fraction.png`
 - `assets/curves/Ant-v5/ant_seed1/action_std.png`
 
-Walker2d curve set:
+Walker2d curve sets:
 
 - `assets/curves/Walker2d-v5/walker2d_seed1/training_return.png`
 - `assets/curves/Walker2d-v5/walker2d_seed1/evaluation_return.png`
@@ -136,6 +156,9 @@ Walker2d curve set:
 - `assets/curves/Walker2d-v5/walker2d_seed1/approx_kl.png`
 - `assets/curves/Walker2d-v5/walker2d_seed1/clip_fraction.png`
 - `assets/curves/Walker2d-v5/walker2d_seed1/action_std.png`
+
+The same seven-plot set is included for `walker2d_seed2` and
+`walker2d_seed3`.
 
 ## Why MuJoCo Continuous Control
 
@@ -272,7 +295,9 @@ make video-ant
 ```
 
 Video recording uses `render_mode="rgb_array"` and deterministic actions. The
-default outputs are GIFs under `assets/videos/ant/` and
+published Walker2d representative rollout is
+`assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif`; `make
+video-walker` can regenerate default Walker2d GIFs under
 `assets/videos/walker2d/`.
 
 ## Plotting
@@ -290,14 +315,15 @@ entropy, approximate KL, clip fraction, and action standard-deviation curves.
 Expected PPO and locomotion failure modes include:
 
 - Ant policies that learn movement but fail to form a stable gait.
-- Walker2d policies that improve briefly and then collapse after large updates.
+- Walker2d policies that improve briefly or learn partial gaits, then terminate
+  early when balance becomes unstable.
 - Value estimates that lag behind rapidly changing returns.
 - Entropy collapse, visible through falling action standard deviation.
 - Excessive approximate KL or high clip fraction, indicating overly aggressive
   policy updates.
 - Action saturation near the environment bounds.
 
-Detailed environment-specific reports will be added after full training runs:
+Detailed environment-specific reports can be added after the Ant run:
 
 - `reports/ant_report.md`
 - `reports/walker2d_report.md`
