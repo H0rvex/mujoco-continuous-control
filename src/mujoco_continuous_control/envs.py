@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import gymnasium as gym
+from gymnasium.vector import AutoresetMode
 
 EnvFactory = Callable[[], gym.Env[Any, Any]]
 
@@ -72,4 +73,7 @@ def make_vector_env(
         )
         for idx in range(num_envs)
     ]
-    return gym.vector.SyncVectorEnv(env_fns)
+    return gym.vector.SyncVectorEnv(
+        env_fns,
+        autoreset_mode=AutoresetMode.SAME_STEP,
+    )

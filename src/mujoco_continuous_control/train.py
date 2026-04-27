@@ -110,7 +110,9 @@ def _normalize_obs(
     return obs_rms.normalize(obs_tensor, clip=clip)
 
 
-def _extract_episode_metrics(infos: Mapping[str, Any]) -> list[tuple[float, float]]:
+def _extract_episode_metrics_from_mapping(
+    infos: Mapping[str, Any],
+) -> list[tuple[float, float]]:
     if "episode" not in infos:
         return []
 
