@@ -12,15 +12,6 @@ locomotion baseline.
 
 > **Status:** Implementation and experiment pipeline in progress. Final Walker2d-v5 and Ant-v5 scores, curves, and rollout GIFs will be added after full training runs.
 
-## Visual Results
-
-Rollout GIFs will be embedded here after full Walker2d-v5 and Ant-v5 training runs.
-
-| Environment | Planned GIF path |
-| --- | --- |
-| Walker2d-v5 | `assets/videos/walker2d/Walker2d-v5_episode_1.gif` |
-| Ant-v5 | `assets/videos/ant/Ant-v5_episode_1.gif` |
-
 ## Rollout Videos
 
 Walker2d-v5 is used as the lower-dimensional locomotion baseline, while Ant-v5 is the harder multi-limb benchmark and primary portfolio target. Recordings are generated from deterministic
@@ -83,7 +74,8 @@ make video-ant
 
 ## Evaluation Protocol
 
-Development runs use one seed first to debug the full training, checkpointing, evaluation, plotting, and video pipeline.
+Development runs use one seed first to debug the full training, evaluation,
+plotting, and video pipeline.
 
 Final reported results use multiple training seeds where compute allows:
 
@@ -117,7 +109,8 @@ Each trained policy is evaluated deterministically with:
 - fixed evaluation seeds
 - 10–20 episodes per training seed
 
-The final report aggregates mean return, standard deviation, minimum return, maximum return, and best checkpoint performance across seeds.
+The final report aggregates mean return, standard deviation, minimum return,
+maximum return, and best deterministic evaluation performance across seeds.
 
 ## Training and Evaluation Curves
 
