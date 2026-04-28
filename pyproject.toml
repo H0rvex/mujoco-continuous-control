@@ -7,11 +7,13 @@ name = "mujoco-continuous-control"
 version = "0.1.0"
 description = "Portfolio-grade MuJoCo continuous-control reinforcement learning experiments."
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
     "gymnasium[mujoco]>=1.0",
     "matplotlib>=3.8",
     "numpy>=1.24",
+    "pillow>=10.0",
     "pyyaml>=6.0",
     "torch>=2.0",
     "tqdm>=4.66",
