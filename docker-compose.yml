@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        APP_GID: ${GID:-1000}
+        APP_UID: ${UID:-1000}
+    image: mujoco-continuous-control:dev
+    environment:
+      MPLCONFIGDIR: /tmp/matplotlib
+      MUJOCO_GL: osmesa
+      PYOPENGL_PLATFORM: osmesa
+    volumes:
+      - ./assets:/app/assets
+      - ./runs:/app/runs
