@@ -4,71 +4,25 @@ This project is a reproducible MuJoCo continuous-control benchmark using
 from-scratch PPO. It is designed as a bridge from classic Gymnasium RL projects
 toward robotics simulation stacks such as Isaac Lab.
 
-The implementation focuses on bounded continuous actions, tanh-squashed
-Gaussian policies, vectorized locomotion rollouts, deterministic evaluation,
-rollout media, and diagnostic plots. Ant-v5 is the primary benchmark because it
-is the harder multi-limb locomotion task; Walker2d-v5 is the lower-dimensional
-locomotion baseline.
+The goal is not to maximize one lucky benchmark run, but to build a
+reproducible continuous-control PPO training system with multi-seed evaluation,
+diagnostics, and visual rollout validation.
+
+Ant-v5 is the primary benchmark because it is the harder multi-limb locomotion
+task; Walker2d-v5 is the lower-dimensional locomotion baseline.
 
 > **Status:** Walker2d-v5 and Ant-v5 each have three completed PPO seeds with
 > deterministic evaluation, curves, and representative rollout GIFs. Humanoid-v5
 > is the stretch target.
 
-## Rollout Videos
-
-Walker2d-v5 is used as the lower-dimensional locomotion baseline, while Ant-v5
-is the harder multi-limb benchmark and primary portfolio target. Recordings are
-generated from deterministic policy rollouts and saved as GIFs for quick
-inspection.
-
-| Environment | Rollout GIF | Selection |
-| --- | --- | --- |
-| Ant-v5 | `assets/videos/Ant-v5/ant_seed2/Ant-v5_episode_1.gif` | Representative rollout from the strongest stable Ant seed |
-| Walker2d-v5 | `assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif` | Representative rollout from the strongest Walker2d seed |
-
-<p align="center">
-  <img src="assets/videos/Ant-v5/ant_seed2/Ant-v5_episode_1.gif" width="620" alt="Ant-v5 deterministic rollout from seed 2">
-</p>
-
-<p align="center">
-  <img src="assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif" width="620" alt="Walker2d-v5 deterministic rollout from seed 1">
-</p>
-
-Ant seed 2 is used as the representative Ant video because it has the highest
-external 20-episode deterministic evaluation mean while remaining visually
-stable in rollout media. Walker2d seed 1 is used as the representative Walker2d
-video because it has the highest Walker2d deterministic evaluation mean and
-survives the full 1000-step horizon in all evaluation episodes.
-
-```bash
-make video-walker
-make video-ant
-```
-
-## Highlights
-
-- From-scratch PPO implementation in PyTorch for continuous-control locomotion.
-- Tanh-squashed Gaussian actor with log-probability correction for bounded
-  action spaces.
-- Separate actor and critic networks with configurable hidden sizes and
-  activation.
-- Vectorized Gymnasium environments for rollout collection.
-- GAE-Lambda returns, clipped PPO policy objective, clipped value loss,
-  entropy monitoring with configurable entropy regularization, gradient clipping, and target-KL early stopping.
-- Observation normalization with frozen statistics during evaluation and video
-  recording.
-- Deterministic evaluation protocol for reproducible policy comparison.
-- CSV metrics, JSON evaluation summaries, rollout GIFs, and Matplotlib curves
-  for reviewable experiment artifacts.
-
-## Results
+## Results Summary
 
 Walker2d-v5 and Ant-v5 results are from `best.pt` checkpoints evaluated
 deterministically for 20 episodes per seed with frozen observation
 normalization and evaluation seed `1000`. The seed-level tables report the
 post-training `eval_results.json` summary for each trained seed.
 
-| Environment | Role | Train seeds | Steps / seed | Eval episodes / seed | Mean return | Std across seeds | Best return | Curves | Video |
+| Environment | Role | Train seeds | Steps / seed | Eval episodes / seed | Mean return | Std across seeds | Best 20-episode eval mean | Curves | Video |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | Walker2d-v5 | Locomotion baseline | 3 | 2,000,000 | 20 | 2951.31 | 872.80 | 3720.55 | `assets/curves/Walker2d-v5/` | `assets/videos/Walker2d-v5/walker2d_seed1/` |
 | Ant-v5 | Harder benchmark | 3 | 5,000,000 | 20 | 4750.40 | 70.15 | 4822.60 | `assets/curves/Ant-v5/` | `assets/videos/Ant-v5/ant_seed2/` |
@@ -116,6 +70,46 @@ Interesting observations and edge cases:
 - Training returns are noisy for both environments because stochastic rollout
   collection can terminate early even when scheduled deterministic evaluation is
   improving.
+
+## Rollout Videos
+
+Recordings are generated from deterministic policy rollouts and saved as GIFs
+for quick inspection.
+
+| Environment | Rollout GIF | Selection |
+| --- | --- | --- |
+| Ant-v5 | `assets/videos/Ant-v5/ant_seed2/Ant-v5_episode_1.gif` | Representative rollout from the strongest stable Ant seed |
+| Walker2d-v5 | `assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif` | Representative rollout from the strongest Walker2d seed |
+
+<p align="center">
+  <img src="assets/videos/Ant-v5/ant_seed2/Ant-v5_episode_1.gif" width="620" alt="Ant-v5 deterministic rollout from seed 2">
+</p>
+
+<p align="center">
+  <img src="assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif" width="620" alt="Walker2d-v5 deterministic rollout from seed 1">
+</p>
+
+Ant seed 2 is used as the representative Ant video because it has the highest
+external 20-episode deterministic evaluation mean while remaining visually
+stable in rollout media. Walker2d seed 1 is used as the representative Walker2d
+video because it has the highest Walker2d deterministic evaluation mean and
+survives the full 1000-step horizon in all evaluation episodes.
+
+```bash
+make video-walker
+make video-ant
+```
+
+## Key Engineering Details
+
+- tanh-squashed Gaussian policy with log-probability correction
+- GAE-Lambda
+- clipped PPO policy and value losses
+- observation normalization with frozen eval/video statistics
+- reward normalization and clipping
+- target-KL early stopping
+- deterministic multi-seed evaluation
+- rollout GIFs, CSV logs, JSON eval summaries, and diagnostic curves
 
 Recommended result-generation flow:
 
