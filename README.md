@@ -111,6 +111,8 @@ make video-ant
 - deterministic multi-seed evaluation
 - rollout GIFs, CSV logs, JSON eval summaries, and diagnostic curves
 
+## Reproducing Results
+
 Recommended result-generation flow:
 
 ```bash
@@ -180,7 +182,7 @@ Each trained policy is evaluated deterministically with:
 - environment action: scale(tanh(mean))
 - frozen observation normalization statistics
 - fixed evaluation seeds
-- 10–20 episodes per training seed
+- final reported results use 20 deterministic evaluation episodes per training seed
 
 The final report aggregates mean return, standard deviation, minimum return,
 maximum return, and best deterministic evaluation performance across seeds.
