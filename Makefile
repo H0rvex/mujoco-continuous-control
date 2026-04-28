@@ -1,4 +1,4 @@
-.PHONY: install test lint format-check smoke train-walker train-ant eval-walker eval-ant video-walker video-ant docker-build docker-test docker-smoke docker-shell clean
+.PHONY: install test lint format-check smoke train-walker train-ant train-humanoid eval-walker eval-ant eval-humanoid video-walker video-ant video-humanoid docker-build docker-test docker-smoke docker-shell clean
 
 PYTHON ?= python
 DOCKER ?= docker
@@ -6,8 +6,10 @@ DOCKER_IMAGE ?= mujoco-continuous-control:dev
 DOCKER_BUILD_ARGS ?= --build-arg APP_UID=$(shell id -u) --build-arg APP_GID=$(shell id -g)
 WALKER_RUN ?= walker2d_seed1
 ANT_RUN ?= ant_seed1
+HUMANOID_RUN ?= humanoid_seed1
 WALKER_CHECKPOINT ?= runs/Walker2d-v5/$(WALKER_RUN)/checkpoints/best.pt
 ANT_CHECKPOINT ?= runs/Ant-v5/$(ANT_RUN)/checkpoints/best.pt
+HUMANOID_CHECKPOINT ?= runs/Humanoid-v5/$(HUMANOID_RUN)/checkpoints/best.pt
 
 install:
 	pip install -e ".[dev]"
@@ -30,6 +32,9 @@ train-walker:
 train-ant:
 	$(PYTHON) -m mujoco_continuous_control.train --config configs/ant.yaml --run-name $(ANT_RUN)
 
+train-humanoid:
+	$(PYTHON) -m mujoco_continuous_control.train --config configs/humanoid.yaml --run-name $(HUMANOID_RUN)
+
 eval-walker:
 	@test -f "$(WALKER_CHECKPOINT)" || { echo "Missing $(WALKER_CHECKPOINT). Run make train-walker first, or pass WALKER_CHECKPOINT=/path/to/best.pt."; exit 1; }
 	$(PYTHON) -m mujoco_continuous_control.evaluate --checkpoint $(WALKER_CHECKPOINT) --episodes 20
@@ -38,6 +43,10 @@ eval-ant:
 	@test -f "$(ANT_CHECKPOINT)" || { echo "Missing $(ANT_CHECKPOINT). Run make train-ant first, or pass ANT_CHECKPOINT=/path/to/best.pt."; exit 1; }
 	$(PYTHON) -m mujoco_continuous_control.evaluate --checkpoint $(ANT_CHECKPOINT) --episodes 20
 
+eval-humanoid:
+	@test -f "$(HUMANOID_CHECKPOINT)" || { echo "Missing $(HUMANOID_CHECKPOINT). Run make train-humanoid first, or pass HUMANOID_CHECKPOINT=/path/to/best.pt."; exit 1; }
+	$(PYTHON) -m mujoco_continuous_control.evaluate --checkpoint $(HUMANOID_CHECKPOINT) --episodes 20
+
 video-walker:
 	@test -f "$(WALKER_CHECKPOINT)" || { echo "Missing $(WALKER_CHECKPOINT). Run make train-walker first, or pass WALKER_CHECKPOINT=/path/to/best.pt."; exit 1; }
 	$(PYTHON) -m mujoco_continuous_control.record_video --checkpoint $(WALKER_CHECKPOINT) --episodes 3 --output-dir assets/videos/walker2d
@@ -45,6 +54,10 @@ video-walker:
 video-ant:
 	@test -f "$(ANT_CHECKPOINT)" || { echo "Missing $(ANT_CHECKPOINT). Run make train-ant first, or pass ANT_CHECKPOINT=/path/to/best.pt."; exit 1; }
 	$(PYTHON) -m mujoco_continuous_control.record_video --checkpoint $(ANT_CHECKPOINT) --episodes 3 --output-dir assets/videos/ant
+
+video-humanoid:
+	@test -f "$(HUMANOID_CHECKPOINT)" || { echo "Missing $(HUMANOID_CHECKPOINT). Run make train-humanoid first, or pass HUMANOID_CHECKPOINT=/path/to/best.pt."; exit 1; }
+	$(PYTHON) -m mujoco_continuous_control.record_video --checkpoint $(HUMANOID_CHECKPOINT) --episodes 3 --output-dir assets/videos/humanoid
 
 docker-build:
 	$(DOCKER) build $(DOCKER_BUILD_ARGS) -t $(DOCKER_IMAGE) .

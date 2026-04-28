@@ -105,7 +105,7 @@ def test_vector_env_uses_same_step_autoreset_without_dummy_transition() -> None:
         envs.close()
 
 
-@pytest.mark.parametrize("env_id", ["Walker2d-v5", "Ant-v5"])
+@pytest.mark.parametrize("env_id", ["Walker2d-v5", "Ant-v5", "Humanoid-v5"])
 def test_mujoco_action_spaces_are_continuous(env_id: str) -> None:
     _requires_env(env_id)
     env = make_env(env_id=env_id, seed=7)()
