@@ -1,7 +1,8 @@
 # MuJoCo Continuous Control with PPO
 
-This project is a reproducible MuJoCo continuous-control benchmark using
-from-scratch PPO. It is designed as a bridge from classic Gymnasium RL projects
+This project is a reproducible MuJoCo continuous-control benchmark using a
+from-scratch PyTorch PPO implementation. 
+It is designed as a bridge from classic Gymnasium RL projects
 toward robotics simulation stacks such as Isaac Lab.
 
 The goal is not to maximize one lucky benchmark run, but to build a
@@ -110,6 +111,33 @@ make video-ant
 - target-KL early stopping
 - deterministic multi-seed evaluation
 - rollout GIFs, CSV logs, JSON eval summaries, and diagnostic curves
+
+## Core Hyperparameters
+
+Values are pulled from `configs/walker2d.yaml` and `configs/ant.yaml`.
+
+| Setting | Walker2d-v5 | Ant-v5 |
+| --- | ---: | ---: |
+| `total_timesteps` | 2000000 | 5000000 |
+| `num_envs` | 8 | 8 |
+| `rollout_steps` | 2048 | 2048 |
+| Rollout batch size | 16384 | 16384 |
+| `num_minibatches` | 16 | 16 |
+| `update_epochs` | 5 | 5 |
+| `learning_rate` | 2.0e-4 | 2.0e-4 |
+| `gamma` | 0.99 | 0.99 |
+| `gae_lambda` | 0.95 | 0.95 |
+| `clip_coef` | 0.2 | 0.2 |
+| `target_kl` | 0.02 | 0.02 |
+| `ent_coef` | 0.0 | 0.0 |
+| `vf_coef` | 0.5 | 0.5 |
+| `max_grad_norm` | 0.5 | 0.5 |
+| `normalize_obs` | true | true |
+| `normalize_rewards` | true | true |
+| `normalize_advantages` | true | true |
+| `reward_clip` | 10.0 | 10.0 |
+| `hidden_sizes` | [256, 256] | [256, 256] |
+| `activation` | tanh | tanh |
 
 ## Reproducing Results
 
