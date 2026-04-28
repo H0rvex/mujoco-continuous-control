@@ -10,9 +10,9 @@ rollout media, and diagnostic plots. Ant-v5 is the primary benchmark because it
 is the harder multi-limb locomotion task; Walker2d-v5 is the lower-dimensional
 locomotion baseline.
 
-> **Status:** Walker2d-v5 has three completed PPO seeds with deterministic
-> evaluation, curves, and a representative rollout GIF. Ant-v5 remains the next
-> harder benchmark.
+> **Status:** Walker2d-v5 and Ant-v5 each have three completed PPO seeds with
+> deterministic evaluation, curves, and representative rollout GIFs. Humanoid-v5
+> is the stretch target.
 
 ## Rollout Videos
 
@@ -21,19 +21,24 @@ is the harder multi-limb benchmark and primary portfolio target. Recordings are
 generated from deterministic policy rollouts and saved as GIFs for quick
 inspection.
 
-| Environment | Rollout GIF | Command |
+| Environment | Rollout GIF | Selection |
 | --- | --- | --- |
-| Walker2d-v5 | `assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif` | Representative rollout from the strongest seed |
-| Ant-v5 | `assets/videos/ant/Ant-v5_episode_1.gif` | `make video-ant` after Ant training |
+| Ant-v5 | `assets/videos/Ant-v5/ant_seed2/Ant-v5_episode_1.gif` | Representative rollout from the strongest stable Ant seed |
+| Walker2d-v5 | `assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif` | Representative rollout from the strongest Walker2d seed |
+
+<p align="center">
+  <img src="assets/videos/Ant-v5/ant_seed2/Ant-v5_episode_1.gif" width="620" alt="Ant-v5 deterministic rollout from seed 2">
+</p>
 
 <p align="center">
   <img src="assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif" width="620" alt="Walker2d-v5 deterministic rollout from seed 1">
 </p>
 
-Walker2d seed 1 is used as the representative video because it has the highest
-20-episode deterministic evaluation mean and survives the full 1000-step
-horizon in all evaluation episodes. Ant rollout media will be added after the
-Ant training run.
+Ant seed 2 is used as the representative Ant video because it has the highest
+external 20-episode deterministic evaluation mean while remaining visually
+stable in rollout media. Walker2d seed 1 is used as the representative Walker2d
+video because it has the highest Walker2d deterministic evaluation mean and
+survives the full 1000-step horizon in all evaluation episodes.
 
 ```bash
 make video-walker
@@ -58,15 +63,15 @@ make video-ant
 
 ## Results
 
-Walker2d-v5 results are from `best.pt` checkpoints evaluated deterministically
-for 20 episodes per seed with frozen observation normalization and evaluation
-seed `1000`. The seed-level table reports the post-training
-`eval_results.json` summary for each trained seed.
+Walker2d-v5 and Ant-v5 results are from `best.pt` checkpoints evaluated
+deterministically for 20 episodes per seed with frozen observation
+normalization and evaluation seed `1000`. The seed-level tables report the
+post-training `eval_results.json` summary for each trained seed.
 
 | Environment | Role | Train seeds | Steps / seed | Eval episodes / seed | Mean return | Std across seeds | Best return | Curves | Video |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | Walker2d-v5 | Locomotion baseline | 3 | 2,000,000 | 20 | 2951.31 | 872.80 | 3720.55 | `assets/curves/Walker2d-v5/` | `assets/videos/Walker2d-v5/walker2d_seed1/` |
-| Ant-v5 | Harder benchmark | TBD | 5,000,000 | 20 | TBD | TBD | TBD | `assets/curves/Ant-v5/` | `assets/videos/ant/` |
+| Ant-v5 | Harder benchmark | 3 | 5,000,000 | 20 | 4750.40 | 70.15 | 4822.60 | `assets/curves/Ant-v5/` | `assets/videos/Ant-v5/ant_seed2/` |
 
 Walker2d seed-level deterministic evaluation:
 
@@ -82,18 +87,68 @@ it learns partial locomotion but remains dynamically unstable, falls before the
 time limit, and shows the seed sensitivity expected from PPO on contact-rich
 locomotion tasks at this training budget.
 
+Ant seed-level deterministic evaluation:
+
+| Seed | Checkpoint | Eval mean | Eval std | Eval min | Eval max | Episode length note |
+| ---: | --- | ---: | ---: | ---: | ---: | --- |
+| 1 | `runs/Ant-v5/ant_seed1/checkpoints/best.pt` | 4746.07 | 91.40 | 4555.38 | 4877.88 | Full horizon in all 20 episodes, 1000/1000 steps |
+| 2 | `runs/Ant-v5/ant_seed2/checkpoints/best.pt` | 4822.60 | 177.25 | 4340.23 | 5204.72 | Full horizon in 19/20 episodes; one 928-step early termination |
+| 3 | `runs/Ant-v5/ant_seed3/checkpoints/best.pt` | 4682.51 | 955.00 | 570.18 | 5306.86 | Full horizon in 19/20 episodes; one 141-step catastrophic termination |
+
+The aggregate Ant mean is `4750.40` with sample standard deviation `70.15`
+across the three seed-level means. Ant seed 2 is the strongest external
+20-episode checkpoint evaluation. Ant seed 3 has the highest train-time
+deterministic evaluation checkpoint (`4993.54`) and the highest single external
+episode return (`5306.86`), but one catastrophic deterministic rollout makes it
+less robust as the representative result.
+
+Interesting observations and edge cases:
+
+- Ant is substantially stronger and more consistent across seeds than Walker2d
+  in this run set: all three Ant seed means are clustered within about 140
+  return points, while Walker2d seed 3 is a clear instability case.
+- Ant seed 3 shows a useful edge case for reporting: most rollouts are strong,
+  but a single 141-step fall dominates the 20-episode standard deviation. This
+  is why the README reports min return and episode lengths, not only mean.
+- Walker2d seed 3 is an honest failure/partial-success example. It learns some
+  locomotion but never reaches the full horizon during deterministic
+  evaluation, which is visible in both the episode lengths and rollout quality.
+- Training returns are noisy for both environments because stochastic rollout
+  collection can terminate early even when scheduled deterministic evaluation is
+  improving.
+
 Recommended result-generation flow:
 
 ```bash
 python -m mujoco_continuous_control.train --config configs/walker2d.yaml --run-name walker2d_seed1
-make eval-walker
-python -m mujoco_continuous_control.plotting --run-dir runs/Walker2d-v5/walker2d_seed1
-make video-walker
+python -m mujoco_continuous_control.evaluate \
+  --checkpoint runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt \
+  --episodes 20 \
+  --seed 1000 \
+  --output runs/Walker2d-v5/walker2d_seed1/eval_results.json
+python -m mujoco_continuous_control.plotting \
+  --run-dir runs/Walker2d-v5/walker2d_seed1 \
+  --output-dir assets/curves
+python -m mujoco_continuous_control.record_video \
+  --checkpoint runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt \
+  --episodes 3 \
+  --seed 1000 \
+  --output-dir assets/videos/Walker2d-v5/walker2d_seed1
 
-python -m mujoco_continuous_control.train --config configs/ant.yaml --run-name ant_seed1
-make eval-ant
-python -m mujoco_continuous_control.plotting --run-dir runs/Ant-v5/ant_seed1
-make video-ant
+python -m mujoco_continuous_control.train --config configs/ant.yaml --run-name ant_seed2
+python -m mujoco_continuous_control.evaluate \
+  --checkpoint runs/Ant-v5/ant_seed2/checkpoints/best.pt \
+  --episodes 20 \
+  --seed 1000 \
+  --output runs/Ant-v5/ant_seed2/eval_results.json
+python -m mujoco_continuous_control.plotting \
+  --run-dir runs/Ant-v5/ant_seed2 \
+  --output-dir assets/curves
+python -m mujoco_continuous_control.record_video \
+  --checkpoint runs/Ant-v5/ant_seed2/checkpoints/best.pt \
+  --episodes 3 \
+  --seed 1000 \
+  --output-dir assets/videos/Ant-v5/ant_seed2
 ```
 
 ## Evaluation Protocol
@@ -175,8 +230,40 @@ each `assets/curves/Walker2d-v5/walker2d_seed*/` directory.
 
 </details>
 
-Ant curves will use the same artifact layout after Ant training:
-`assets/curves/Ant-v5/ant_seed1/`.
+The primary Ant comparison is the deterministic evaluation curve across the
+three training seeds:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Ant seed 1 evaluation return](assets/curves/Ant-v5/ant_seed1/evaluation_return.png) | ![Ant seed 2 evaluation return](assets/curves/Ant-v5/ant_seed2/evaluation_return.png) | ![Ant seed 3 evaluation return](assets/curves/Ant-v5/ant_seed3/evaluation_return.png) |
+
+Ant training-return curves show the same rollout noise as Walker2d, but the
+scheduled deterministic evaluations remain clustered near strong locomotion
+returns for all three seeds:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Ant seed 1 training return](assets/curves/Ant-v5/ant_seed1/training_return.png) | ![Ant seed 2 training return](assets/curves/Ant-v5/ant_seed2/training_return.png) | ![Ant seed 3 training return](assets/curves/Ant-v5/ant_seed3/training_return.png) |
+
+<details>
+<summary>Ant diagnostic curves</summary>
+
+Approximate KL:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Ant seed 1 approximate KL](assets/curves/Ant-v5/ant_seed1/approx_kl.png) | ![Ant seed 2 approximate KL](assets/curves/Ant-v5/ant_seed2/approx_kl.png) | ![Ant seed 3 approximate KL](assets/curves/Ant-v5/ant_seed3/approx_kl.png) |
+
+Action standard deviation:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Ant seed 1 action standard deviation](assets/curves/Ant-v5/ant_seed1/action_std.png) | ![Ant seed 2 action standard deviation](assets/curves/Ant-v5/ant_seed2/action_std.png) | ![Ant seed 3 action standard deviation](assets/curves/Ant-v5/ant_seed3/action_std.png) |
+
+Additional plots are available for `losses`, `entropy`, and `clip_fraction` in
+each `assets/curves/Ant-v5/ant_seed*/` directory.
+
+</details>
 
 ## Why MuJoCo Continuous Control
 
@@ -276,6 +363,23 @@ The main MuJoCo targets use Gymnasium MuJoCo v5 environments. The smoke config
 uses `Pendulum-v1` so the package can be checked quickly without launching a
 long MuJoCo run.
 
+## Docker
+
+The Docker image installs the package with development dependencies and sets
+headless MuJoCo rendering defaults for smoke tests and GIF recording.
+
+```bash
+make docker-build
+make docker-test
+make docker-smoke
+```
+
+For an interactive container with `runs/` and `assets/` mounted from the host:
+
+```bash
+make docker-shell
+```
+
 ## Training
 
 ```bash
@@ -313,10 +417,13 @@ make video-ant
 ```
 
 Video recording uses `render_mode="rgb_array"` and deterministic actions. The
-published Walker2d representative rollout is
-`assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif`; `make
-video-walker` can regenerate default Walker2d GIFs under
-`assets/videos/walker2d/`.
+published Ant representative rollout is
+`assets/videos/Ant-v5/ant_seed2/Ant-v5_episode_1.gif`, and the published
+Walker2d representative rollout is
+`assets/videos/Walker2d-v5/walker2d_seed1/Walker2d-v5_episode_1.gif`.
+`make video-ant` and `make video-walker` regenerate default GIFs under
+`assets/videos/ant/` and `assets/videos/walker2d/`; use explicit
+`record_video` commands when regenerating the seed-specific portfolio paths.
 
 ## Plotting
 
@@ -332,7 +439,8 @@ entropy, approximate KL, clip fraction, and action standard-deviation curves.
 
 Expected PPO and locomotion failure modes include:
 
-- Ant policies that learn movement but fail to form a stable gait.
+- Ant policies that mostly learn stable movement but still have rare
+  catastrophic deterministic rollouts.
 - Walker2d policies that improve briefly or learn partial gaits, then terminate
   early when balance becomes unstable.
 - Value estimates that lag behind rapidly changing returns.
@@ -341,7 +449,7 @@ Expected PPO and locomotion failure modes include:
   policy updates.
 - Action saturation near the environment bounds.
 
-Detailed environment-specific reports can be added after the Ant run:
+Optional environment-specific reports can expand on the top-level README:
 
 - `reports/ant_report.md`
 - `reports/walker2d_report.md`
