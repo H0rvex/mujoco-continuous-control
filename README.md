@@ -470,9 +470,7 @@ continuous-control locomotion rather than only a small baseline.
 
 Humanoid-v5 is the completed stretch benchmark for the repository. It adds a
 much larger observation and action space, upright balance, and a harder
-gait-learning problem. Three strong Humanoid seeds make the project read less
-like a single environment demo and more like a reusable PPO continuous-control
-benchmark.
+gait-learning problem. Three strong Humanoid seeds make the project read less like a single-environment demo and more like a reusable PPO continuous-control training/evaluation pipeline.
 
 ## Algorithm Overview
 
