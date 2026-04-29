@@ -14,13 +14,13 @@ dimensional locomotion task in this run set. Ant-v5 is the harder multi-limb
 benchmark after Walker2d-v5, and Walker2d-v5 is the lower-dimensional
 locomotion baseline.
 
-> **Status:** Walker2d-v5, Ant-v5, and Humanoid-v5 each have three completed
+> **Status:** Humanoid-v5, Ant-v5, and Walker2d-v5 each have three completed
 > PPO seeds with deterministic evaluation, curves, and representative rollout
 > GIFs.
 
 ## Results Summary
 
-Walker2d-v5, Ant-v5, and Humanoid-v5 results are from `best.pt` checkpoints
+Humanoid-v5, Ant-v5, and Walker2d-v5 results are from `best.pt` checkpoints
 evaluated deterministically for 20 episodes per seed with frozen observation
 normalization and evaluation seed `1000`. The seed-level tables report the
 post-training `eval_results.json` summary for each trained seed.
@@ -46,20 +46,6 @@ Humanoid rollout. Its deterministic evaluation is stable across all 20
 full-horizon episodes, even though the last stochastic on-policy training rows
 remain noisy.
 
-Walker2d seed-level deterministic evaluation:
-
-| Seed | Checkpoint | Eval mean | Eval std | Eval min | Eval max | Episode length note |
-| ---: | --- | ---: | ---: | ---: | ---: | --- |
-| 1 | `runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt` | 3720.55 | 57.10 | 3609.85 | 3848.61 | Full horizon in all 20 episodes, 1000/1000 steps |
-| 2 | `runs/Walker2d-v5/walker2d_seed2/checkpoints/best.pt` | 3130.59 | 12.98 | 3104.85 | 3155.95 | Full horizon in all 20 episodes, 1000/1000 steps |
-| 3 | `runs/Walker2d-v5/walker2d_seed3/checkpoints/best.pt` | 2002.79 | 422.43 | 1457.71 | 2830.42 | Early termination in all 20 episodes, 453-808 steps |
-
-The aggregate Walker2d mean is `2951.31` with sample standard deviation
-`872.80` across the three seed-level means. Seed 3 is a useful negative case:
-it learns partial locomotion but remains dynamically unstable, falls before the
-time limit, and shows the seed sensitivity expected from PPO on contact-rich
-locomotion tasks at this training budget.
-
 Ant seed-level deterministic evaluation:
 
 | Seed | Checkpoint | Eval mean | Eval std | Eval min | Eval max | Episode length note |
@@ -74,6 +60,20 @@ across the three seed-level means. Ant seed 2 is the strongest external
 deterministic evaluation checkpoint (`4993.54`) and the highest single external
 episode return (`5306.86`), but one catastrophic deterministic rollout makes it
 less robust as the representative result.
+
+Walker2d seed-level deterministic evaluation:
+
+| Seed | Checkpoint | Eval mean | Eval std | Eval min | Eval max | Episode length note |
+| ---: | --- | ---: | ---: | ---: | ---: | --- |
+| 1 | `runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt` | 3720.55 | 57.10 | 3609.85 | 3848.61 | Full horizon in all 20 episodes, 1000/1000 steps |
+| 2 | `runs/Walker2d-v5/walker2d_seed2/checkpoints/best.pt` | 3130.59 | 12.98 | 3104.85 | 3155.95 | Full horizon in all 20 episodes, 1000/1000 steps |
+| 3 | `runs/Walker2d-v5/walker2d_seed3/checkpoints/best.pt` | 2002.79 | 422.43 | 1457.71 | 2830.42 | Early termination in all 20 episodes, 453-808 steps |
+
+The aggregate Walker2d mean is `2951.31` with sample standard deviation
+`872.80` across the three seed-level means. Seed 3 is a useful negative case:
+it learns partial locomotion but remains dynamically unstable, falls before the
+time limit, and shows the seed sensitivity expected from PPO on contact-rich
+locomotion tasks at this training budget.
 
 Interesting observations and edge cases:
 
@@ -91,7 +91,7 @@ Interesting observations and edge cases:
 - Walker2d seed 3 is an honest failure/partial-success example. It learns some
   locomotion but never reaches the full horizon during deterministic
   evaluation, which is visible in both the episode lengths and rollout quality.
-- Training returns are noisy for both environments because stochastic rollout
+- Training returns are noisy across environments because stochastic rollout
   collection can terminate early even when scheduled deterministic evaluation is
   improving.
 
@@ -128,13 +128,13 @@ highest Walker2d deterministic evaluation mean and survives the full 1000-step
 horizon in all evaluation episodes.
 
 ```bash
-make video-walker
-make video-ant
 python -m mujoco_continuous_control.record_video \
   --checkpoint runs/Humanoid-v5/humanoid_seed3/checkpoints/best.pt \
   --episodes 3 \
   --seed 1000 \
   --output-dir assets/videos/Humanoid-v5/humanoid_seed3
+make video-ant
+make video-walker
 ```
 
 ## Key Engineering Details
@@ -150,12 +150,12 @@ python -m mujoco_continuous_control.record_video \
 
 ## Core Hyperparameters
 
-Values are pulled from `configs/walker2d.yaml`, `configs/ant.yaml`, and
-`configs/humanoid.yaml`.
+Values are pulled from `configs/humanoid.yaml`, `configs/ant.yaml`, and
+`configs/walker2d.yaml`.
 
-| Setting | Walker2d-v5 | Ant-v5 | Humanoid-v5 |
+| Setting | Humanoid-v5 | Ant-v5 | Walker2d-v5 |
 | --- | ---: | ---: | ---: |
-| `total_timesteps` | 2000000 | 5000000 | 5000000 |
+| `total_timesteps` | 5000000 | 5000000 | 2000000 |
 | `num_envs` | 8 | 8 | 8 |
 | `rollout_steps` | 2048 | 2048 | 2048 |
 | Rollout batch size | 16384 | 16384 | 16384 |
@@ -178,39 +178,13 @@ Values are pulled from `configs/walker2d.yaml`, `configs/ant.yaml`, and
 
 ## Reproducing Results
 
-Recommended result-generation flow:
+Recommended result-generation flow, grouped by environment. The examples use
+the representative seed for each environment; repeat with `seed1`, `seed2`, and
+`seed3` run names to regenerate the full tables.
+
+### Humanoid-v5
 
 ```bash
-python -m mujoco_continuous_control.train --config configs/walker2d.yaml --run-name walker2d_seed1
-python -m mujoco_continuous_control.evaluate \
-  --checkpoint runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt \
-  --episodes 20 \
-  --seed 1000 \
-  --output runs/Walker2d-v5/walker2d_seed1/eval_results.json
-python -m mujoco_continuous_control.plotting \
-  --run-dir runs/Walker2d-v5/walker2d_seed1 \
-  --output-dir assets/curves
-python -m mujoco_continuous_control.record_video \
-  --checkpoint runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt \
-  --episodes 3 \
-  --seed 1000 \
-  --output-dir assets/videos/Walker2d-v5/walker2d_seed1
-
-python -m mujoco_continuous_control.train --config configs/ant.yaml --run-name ant_seed2
-python -m mujoco_continuous_control.evaluate \
-  --checkpoint runs/Ant-v5/ant_seed2/checkpoints/best.pt \
-  --episodes 20 \
-  --seed 1000 \
-  --output runs/Ant-v5/ant_seed2/eval_results.json
-python -m mujoco_continuous_control.plotting \
-  --run-dir runs/Ant-v5/ant_seed2 \
-  --output-dir assets/curves
-python -m mujoco_continuous_control.record_video \
-  --checkpoint runs/Ant-v5/ant_seed2/checkpoints/best.pt \
-  --episodes 3 \
-  --seed 1000 \
-  --output-dir assets/videos/Ant-v5/ant_seed2
-
 python -m mujoco_continuous_control.train --config configs/humanoid.yaml --run-name humanoid_seed3
 python -m mujoco_continuous_control.evaluate \
   --checkpoint runs/Humanoid-v5/humanoid_seed3/checkpoints/best.pt \
@@ -227,34 +201,58 @@ python -m mujoco_continuous_control.record_video \
   --output-dir assets/videos/Humanoid-v5/humanoid_seed3
 ```
 
+### Ant-v5
+
+```bash
+python -m mujoco_continuous_control.train --config configs/ant.yaml --run-name ant_seed2
+python -m mujoco_continuous_control.evaluate \
+  --checkpoint runs/Ant-v5/ant_seed2/checkpoints/best.pt \
+  --episodes 20 \
+  --seed 1000 \
+  --output runs/Ant-v5/ant_seed2/eval_results.json
+python -m mujoco_continuous_control.plotting \
+  --run-dir runs/Ant-v5/ant_seed2 \
+  --output-dir assets/curves
+python -m mujoco_continuous_control.record_video \
+  --checkpoint runs/Ant-v5/ant_seed2/checkpoints/best.pt \
+  --episodes 3 \
+  --seed 1000 \
+  --output-dir assets/videos/Ant-v5/ant_seed2
+```
+
+### Walker2d-v5
+
+```bash
+python -m mujoco_continuous_control.train --config configs/walker2d.yaml --run-name walker2d_seed1
+python -m mujoco_continuous_control.evaluate \
+  --checkpoint runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt \
+  --episodes 20 \
+  --seed 1000 \
+  --output runs/Walker2d-v5/walker2d_seed1/eval_results.json
+python -m mujoco_continuous_control.plotting \
+  --run-dir runs/Walker2d-v5/walker2d_seed1 \
+  --output-dir assets/curves
+python -m mujoco_continuous_control.record_video \
+  --checkpoint runs/Walker2d-v5/walker2d_seed1/checkpoints/best.pt \
+  --episodes 3 \
+  --seed 1000 \
+  --output-dir assets/videos/Walker2d-v5/walker2d_seed1
+```
+
 ## Evaluation Protocol
 
 Development runs use one seed first to debug the full training, evaluation,
 plotting, and video pipeline.
 
-Final reported results use multiple training seeds where compute allows:
+Final reported results use three training seeds per environment:
 
-- Walker2d-v5: 3 training seeds
-- Ant-v5: 3 training seeds
 - Humanoid-v5: 3 training seeds
+- Ant-v5: 3 training seeds
+- Walker2d-v5: 3 training seeds
 
-Example multi-seed training commands:
+### Humanoid-v5 Protocol
 
 ```bash
-for seed in 1 2 3; do
-  python -m mujoco_continuous_control.train \
-    --config configs/walker2d.yaml \
-    --seed $seed \
-    --run-name walker2d_seed${seed}
-done
-
-for seed in 1 2 3; do
-  python -m mujoco_continuous_control.train \
-    --config configs/ant.yaml \
-    --seed $seed \
-    --run-name ant_seed${seed}
-done
-
 for seed in 1 2 3; do
   python -m mujoco_continuous_control.train \
     --config configs/humanoid.yaml \
@@ -263,7 +261,68 @@ for seed in 1 2 3; do
 done
 ```
 
-Each trained policy is evaluated deterministically with:
+Evaluate each Humanoid checkpoint deterministically with 20 episodes and seed
+`1000`:
+
+```bash
+for seed in 1 2 3; do
+  python -m mujoco_continuous_control.evaluate \
+    --checkpoint runs/Humanoid-v5/humanoid_seed${seed}/checkpoints/best.pt \
+    --episodes 20 \
+    --seed 1000 \
+    --output runs/Humanoid-v5/humanoid_seed${seed}/eval_results.json
+done
+```
+
+### Ant-v5 Protocol
+
+```bash
+for seed in 1 2 3; do
+  python -m mujoco_continuous_control.train \
+    --config configs/ant.yaml \
+    --seed $seed \
+    --run-name ant_seed${seed}
+done
+```
+
+Evaluate each Ant checkpoint deterministically with 20 episodes and seed
+`1000`:
+
+```bash
+for seed in 1 2 3; do
+  python -m mujoco_continuous_control.evaluate \
+    --checkpoint runs/Ant-v5/ant_seed${seed}/checkpoints/best.pt \
+    --episodes 20 \
+    --seed 1000 \
+    --output runs/Ant-v5/ant_seed${seed}/eval_results.json
+done
+```
+
+### Walker2d-v5 Protocol
+
+```bash
+for seed in 1 2 3; do
+  python -m mujoco_continuous_control.train \
+    --config configs/walker2d.yaml \
+    --seed $seed \
+    --run-name walker2d_seed${seed}
+done
+```
+
+Evaluate each Walker2d checkpoint deterministically with 20 episodes and seed
+`1000`:
+
+```bash
+for seed in 1 2 3; do
+  python -m mujoco_continuous_control.evaluate \
+    --checkpoint runs/Walker2d-v5/walker2d_seed${seed}/checkpoints/best.pt \
+    --episodes 20 \
+    --seed 1000 \
+    --output runs/Walker2d-v5/walker2d_seed${seed}/eval_results.json
+done
+```
+
+Across all environments, each trained policy is evaluated with:
 
 - deterministic raw action from the actor mean
 - bounded policy action: tanh(mean)
@@ -315,40 +374,6 @@ each `assets/curves/Humanoid-v5/humanoid_seed*/` directory.
 
 </details>
 
-The primary Walker2d comparison is the deterministic evaluation curve across
-the three training seeds:
-
-| Seed 1 | Seed 2 | Seed 3 |
-| --- | --- | --- |
-| ![Walker2d seed 1 evaluation return](assets/curves/Walker2d-v5/walker2d_seed1/evaluation_return.png) | ![Walker2d seed 2 evaluation return](assets/curves/Walker2d-v5/walker2d_seed2/evaluation_return.png) | ![Walker2d seed 3 evaluation return](assets/curves/Walker2d-v5/walker2d_seed3/evaluation_return.png) |
-
-Training-return curves show how noisy rollout collection remains even when
-deterministic evaluation improves:
-
-| Seed 1 | Seed 2 | Seed 3 |
-| --- | --- | --- |
-| ![Walker2d seed 1 training return](assets/curves/Walker2d-v5/walker2d_seed1/training_return.png) | ![Walker2d seed 2 training return](assets/curves/Walker2d-v5/walker2d_seed2/training_return.png) | ![Walker2d seed 3 training return](assets/curves/Walker2d-v5/walker2d_seed3/training_return.png) |
-
-<details>
-<summary>Walker2d diagnostic curves</summary>
-
-Approximate KL:
-
-| Seed 1 | Seed 2 | Seed 3 |
-| --- | --- | --- |
-| ![Walker2d seed 1 approximate KL](assets/curves/Walker2d-v5/walker2d_seed1/approx_kl.png) | ![Walker2d seed 2 approximate KL](assets/curves/Walker2d-v5/walker2d_seed2/approx_kl.png) | ![Walker2d seed 3 approximate KL](assets/curves/Walker2d-v5/walker2d_seed3/approx_kl.png) |
-
-Action standard deviation:
-
-| Seed 1 | Seed 2 | Seed 3 |
-| --- | --- | --- |
-| ![Walker2d seed 1 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed1/action_std.png) | ![Walker2d seed 2 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed2/action_std.png) | ![Walker2d seed 3 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed3/action_std.png) |
-
-Additional plots are available for `losses`, `entropy`, and `clip_fraction` in
-each `assets/curves/Walker2d-v5/walker2d_seed*/` directory.
-
-</details>
-
 The primary Ant comparison is the deterministic evaluation curve across the
 three training seeds:
 
@@ -384,6 +409,40 @@ each `assets/curves/Ant-v5/ant_seed*/` directory.
 
 </details>
 
+The primary Walker2d comparison is the deterministic evaluation curve across
+the three training seeds:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 evaluation return](assets/curves/Walker2d-v5/walker2d_seed1/evaluation_return.png) | ![Walker2d seed 2 evaluation return](assets/curves/Walker2d-v5/walker2d_seed2/evaluation_return.png) | ![Walker2d seed 3 evaluation return](assets/curves/Walker2d-v5/walker2d_seed3/evaluation_return.png) |
+
+Training-return curves show how noisy rollout collection remains even when
+deterministic evaluation improves:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 training return](assets/curves/Walker2d-v5/walker2d_seed1/training_return.png) | ![Walker2d seed 2 training return](assets/curves/Walker2d-v5/walker2d_seed2/training_return.png) | ![Walker2d seed 3 training return](assets/curves/Walker2d-v5/walker2d_seed3/training_return.png) |
+
+<details>
+<summary>Walker2d diagnostic curves</summary>
+
+Approximate KL:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 approximate KL](assets/curves/Walker2d-v5/walker2d_seed1/approx_kl.png) | ![Walker2d seed 2 approximate KL](assets/curves/Walker2d-v5/walker2d_seed2/approx_kl.png) | ![Walker2d seed 3 approximate KL](assets/curves/Walker2d-v5/walker2d_seed3/approx_kl.png) |
+
+Action standard deviation:
+
+| Seed 1 | Seed 2 | Seed 3 |
+| --- | --- | --- |
+| ![Walker2d seed 1 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed1/action_std.png) | ![Walker2d seed 2 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed2/action_std.png) | ![Walker2d seed 3 action standard deviation](assets/curves/Walker2d-v5/walker2d_seed3/action_std.png) |
+
+Additional plots are available for `losses`, `entropy`, and `clip_fraction` in
+each `assets/curves/Walker2d-v5/walker2d_seed*/` directory.
+
+</details>
+
 ## Why MuJoCo Continuous Control
 
 MuJoCo locomotion is a compact testbed for continuous-control policy
@@ -397,7 +456,7 @@ simulation and embodied-AI research workflows: locomotion control, normalized
 observations, rollout-based policy optimization, deterministic evaluation, and
 artifact-driven experiment review.
 
-## Why Walker2d, Ant, and Humanoid
+## Why Humanoid, Ant, and Walker2d
 
 Walker2d-v5 is a useful locomotion baseline because it is lower-dimensional and
 easier to inspect visually. It exposes balance, gait formation, and collapse
@@ -511,14 +570,14 @@ make docker-shell
 make smoke
 ```
 
-Use explicit run names for the canonical Walker2d, Ant, and Humanoid artifact
+Use explicit run names for the canonical Humanoid, Ant, and Walker2d artifact
 paths used throughout this README:
 
 ```bash
 python -m mujoco_continuous_control.train --config configs/smoke_test.yaml
-python -m mujoco_continuous_control.train --config configs/walker2d.yaml --run-name walker2d_seed1
-python -m mujoco_continuous_control.train --config configs/ant.yaml --run-name ant_seed1
 python -m mujoco_continuous_control.train --config configs/humanoid.yaml --run-name humanoid_seed1
+python -m mujoco_continuous_control.train --config configs/ant.yaml --run-name ant_seed1
+python -m mujoco_continuous_control.train --config configs/walker2d.yaml --run-name walker2d_seed1
 ```
 
 The Makefile also includes `make train-ant` and `make train-walker`
@@ -528,13 +587,13 @@ the explicit command above for Humanoid.
 ## Evaluation
 
 ```bash
-make eval-walker
-make eval-ant
 python -m mujoco_continuous_control.evaluate \
   --checkpoint runs/Humanoid-v5/humanoid_seed3/checkpoints/best.pt \
   --episodes 20 \
   --seed 1000 \
   --output runs/Humanoid-v5/humanoid_seed3/eval_results.json
+make eval-ant
+make eval-walker
 ```
 
 Evaluation uses deterministic actions and writes JSON summaries containing
@@ -544,13 +603,13 @@ lengths.
 ## Video Recording
 
 ```bash
-make video-walker
-make video-ant
 python -m mujoco_continuous_control.record_video \
   --checkpoint runs/Humanoid-v5/humanoid_seed3/checkpoints/best.pt \
   --episodes 3 \
   --seed 1000 \
   --output-dir assets/videos/Humanoid-v5/humanoid_seed3
+make video-ant
+make video-walker
 ```
 
 Video recording uses `render_mode="rgb_array"` and deterministic actions. The
@@ -568,9 +627,9 @@ portfolio paths.
 ## Plotting
 
 ```bash
-python -m mujoco_continuous_control.plotting --run-dir runs/Walker2d-v5/walker2d_seed1
-python -m mujoco_continuous_control.plotting --run-dir runs/Ant-v5/ant_seed1
 python -m mujoco_continuous_control.plotting --run-dir runs/Humanoid-v5/humanoid_seed1
+python -m mujoco_continuous_control.plotting --run-dir runs/Ant-v5/ant_seed1
+python -m mujoco_continuous_control.plotting --run-dir runs/Walker2d-v5/walker2d_seed1
 ```
 
 The plotting command generates training return, evaluation return, loss,
@@ -606,5 +665,5 @@ and experiment diagnostics.
 Future extensions could include custom MuJoCo morphologies, domain
 randomization, Isaac Lab experiments, or experiment tracking integrations such
 as Weights & Biases. Those would add more demanding embodiment, robustness, and
-simulation-workflow coverage beyond the current Walker2d, Ant, and Humanoid
+simulation-workflow coverage beyond the current Humanoid, Ant, and Walker2d
 locomotion benchmarks.
